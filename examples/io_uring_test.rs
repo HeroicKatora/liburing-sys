@@ -2,6 +2,7 @@ use std::env;
 use std::fs::File;
 use std::io::Error;
 use std::mem;
+use std::ptr;
 use std::os::unix::io::AsRawFd;
 
 use libc::posix_memalign;
@@ -10,7 +11,7 @@ use liburing_sys::*;
 const QD: u32 = 4;
 
 fn main() {
-    let mut ring: io_uring = unsafe { mem::uninitialized() };
+    let mut ring: io_uring = unsafe { mem::zeroed() };
 
     let ret = unsafe { io_uring_queue_init(QD, &mut ring, 0) };
 
@@ -27,7 +28,7 @@ fn main() {
 
     let mut iovecs: Vec<libc::iovec> = vec![unsafe { mem::zeroed() }; QD as usize];
     for iov in iovecs.iter_mut() {
-        let mut buf = unsafe { mem::uninitialized() };
+        let mut buf = ptr::null_mut();
         if unsafe { posix_memalign(&mut buf, 4096, 4096) } != 0 {
             panic!("can't allocate");
         }
@@ -49,7 +50,7 @@ fn main() {
         panic!("ret: {:?}", Error::from_raw_os_error(ret));
     }
 
-    let mut cqe: *mut io_uring_cqe = unsafe { std::mem::zeroed() };
+    let mut cqe: *mut io_uring_cqe = ptr::null_mut();
     let mut done = 0;
     let pending = ret;
     for _ in 0..pending {
